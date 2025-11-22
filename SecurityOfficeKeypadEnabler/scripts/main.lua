@@ -133,12 +133,12 @@ NotifyOnNewObject("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Ke
     -- Only reconfigure if this is our specific target keypad
     if ConstructedObject:GetFullName() == KEYPAD_FULL_NAME then
         DebugLog("Target keypad found, configuring...")
-        ExecuteWithDelay(1000, ConfigureObjects)
+        ExecuteWithDelay(2000, ConfigureObjects)
     end
 end)
 
 -- Register interaction hook (delayed to ensure Blueprint is fully loaded)
-ExecuteWithDelay(1500, function()
+ExecuteWithDelay(2500, function()
     local success, err = pcall(function()
         RegisterHook("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C:InteractWith_A", HandleKeypadInteraction)
     end)
