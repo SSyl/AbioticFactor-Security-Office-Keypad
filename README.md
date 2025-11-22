@@ -36,4 +36,4 @@ This mod re-enables the keypad after hacking, allowing you to toggle the securit
 
 ## Multiplayer
 
-This mod works in multiplayer and should only need to be installed by the **host** or the **dedicated server**. Clients do not need the mod installed, but it shouldn't matter if they do.
+This mod works in multiplayer and needs to be installed by the **host** and anyone else who wants to be able to open/close the shutters via keypad. If only the host as it installed and no one else, only the host will be able to open and close the shutters.
