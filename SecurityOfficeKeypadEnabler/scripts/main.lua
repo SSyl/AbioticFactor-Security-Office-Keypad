@@ -26,16 +26,9 @@ local function DebugLog(message)
     end
 end
 
+-- Simplified validity check using built-in UObject:IsValid()
 local function IsValidObject(obj)
-    if obj == nil then
-        return false
-    end
-
-    if type(obj.IsValid) ~= "function" then
-        return false
-    end
-
-    return obj:IsValid()
+    return obj ~= nil and obj:IsValid()
 end
 
 local function ConfigureObjects()
@@ -54,25 +47,30 @@ local function ConfigureObjects()
             DebugLog("WARNING: Failed to set OneTimeUse on keypad: " .. tostring(err))
         end
     else
-        DebugLog("WARNING: Keypad not found!")
+        DebugLog("WARNING: Keypad not found at path: " .. KEYPAD_PATH)
     end
 
     -- Find the indoor shutter button
     indoorButton = StaticFindObject(BUTTON_PATH)
     if IsValidObject(indoorButton) then
-        DebugLog("Indoor button found")
+        DebugLog("Indoor button found and cached")
     else
-        DebugLog("WARNING: Indoor button not found!")
+        DebugLog("WARNING: Indoor button not found at path: " .. BUTTON_PATH)
     end
 end
 
-local function HandleKeypadInteraction(Context, InteractingCharacter, ComponentUsed)
+--------------------------------------------------------------------------------
+-- Event Handlers
+--------------------------------------------------------------------------------
 
+local function HandleKeypadInteraction(Context, InteractingCharacter, ComponentUsed)
+    -- Validate context parameter
     if not Context then
         DebugLog("WARNING: Context is nil in interaction hook")
         return
     end
 
+    -- Extract the actual keypad object from context
     local ok, self = pcall(function()
         return Context:get()
     end)
@@ -82,7 +80,8 @@ local function HandleKeypadInteraction(Context, InteractingCharacter, ComponentU
         return
     end
 
-    if not (IsValidObject(self) and IsValidObject(indoorButton)) then
+    -- Ensure both keypad and button are valid before proceeding
+    if not IsValidObject(self) or not IsValidObject(indoorButton) then
         if DEBUG then
             DebugLog("Interaction ignored (keypadValid=" .. tostring(IsValidObject(self)) ..
                      ", buttonValid=" .. tostring(IsValidObject(indoorButton)) .. ")")
@@ -90,11 +89,12 @@ local function HandleKeypadInteraction(Context, InteractingCharacter, ComponentU
         return
     end
 
+    -- Verify this is the specific keypad we're targeting
     if self:GetFullName() ~= KEYPAD_FULL_NAME then
         return
     end
 
-    -- Check if keypad has been hacked
+    -- Check if keypad has been hacked (Activated property set to true)
     local activatedSuccess, isActivated = pcall(function()
         return self.Activated
     end)
@@ -109,7 +109,7 @@ local function HandleKeypadInteraction(Context, InteractingCharacter, ComponentU
         return
     end
 
-    -- Trigger the shutters when you press the keypad by calling the toggle function from the button inside
+    -- Trigger the shutters by calling the button's function
     DebugLog("Triggering shutters via keypad")
     local success, err = pcall(function()
         indoorButton:TriggerButtonWithoutUser()
@@ -124,30 +124,30 @@ end
 -- Initialization
 --------------------------------------------------------------------------------
 
--- Initial object configuration (delayed to ensure objects are loaded)
-ExecuteWithDelay(2500, ConfigureObjects)
-
--- Handle keypad respawns/reloads when level streaming occurs
+-- Watch for keypad respawns when level streaming occurs
 NotifyOnNewObject("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C", function(ConstructedObject)
     if not IsValidObject(ConstructedObject) then
         return
     end
 
+    -- Only reconfigure if this is our specific target keypad
     if ConstructedObject:GetFullName() == KEYPAD_FULL_NAME then
-        DebugLog("Target keypad reloaded, reconfiguring...")
-        ExecuteWithDelay(2500, ConfigureObjects)
+        DebugLog("Target keypad found, configuring...")
+        ExecuteWithDelay(1000, ConfigureObjects)
     end
 end)
 
 -- Register interaction hook (delayed to ensure Blueprint is fully loaded)
-ExecuteWithDelay(3000, function()
+ExecuteWithDelay(1500, function()
     local success, err = pcall(function()
         RegisterHook("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C:InteractWith_A", HandleKeypadInteraction)
     end)
 
     if success then
-        DebugLog("Hook registered")
+        DebugLog("Interaction hook registered successfully")
     else
         DebugLog("ERROR: Failed to register hook: " .. tostring(err))
     end
 end)
+
+DebugLog("Mod initialization started - hooks will be registered shortly")
