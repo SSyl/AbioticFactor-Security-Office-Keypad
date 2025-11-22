@@ -124,6 +124,9 @@ end
 -- Initialization
 --------------------------------------------------------------------------------
 
+-- Initial object configuration (delayed to ensure objects are loaded)
+ExecuteWithDelay(2500, ConfigureObjects)
+
 -- Watch for keypad respawns when level streaming occurs
 NotifyOnNewObject("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C", function(ConstructedObject)
     if not IsValidObject(ConstructedObject) then
