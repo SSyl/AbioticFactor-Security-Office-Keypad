@@ -1,4 +1,4 @@
-print("=== [Security Office Keypad Enabler] MOD LOADED ===")
+print("=== [Security Office Keypad Enabler] MOD LOADED === \n")
 
 --------------------------------------------------------------------------------
 -- Configuration
@@ -22,7 +22,7 @@ local indoorButton = nil
 
 local function DebugLog(message)
     if DEBUG then
-        print("[Security Office Keypad Enabler] " .. tostring(message))
+        print("[Security Office Keypad Enabler] " .. tostring(message) .. "\n")
     end
 end
 
@@ -118,45 +118,45 @@ end
 -- Initialization
 --------------------------------------------------------------------------------
 
--- Initial object configuration (delayed to ensure objects are loaded)
-ExecuteWithDelay(2500, function()
-    ExecuteInGameThread(function()
-        ConfigureObjects()
-    end)
-end)
+local hookRegistered = false
 
--- Watch for keypad respawns when level streaming occurs
-NotifyOnNewObject("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C", function(keypad)
-    if not IsValidObject(keypad) then
-        return
-    end
+RegisterHook("/Script/Engine.PlayerController:ClientRestart", function(_Context)
+    DebugLog("ClientRestart hook fired")
 
-    -- Wait for object to be fully initialized before checking name
-    ExecuteWithDelay(250, function()
+    ExecuteWithDelay(2000, function()
         ExecuteInGameThread(function()
-            if IsValidObject(keypad) and keypad:GetFullName() == KEYPAD_FULL_NAME then
-                DebugLog("Target keypad found, configuring...")
-                ExecuteWithDelay(1750, function()
-                    ExecuteInGameThread(function()
-                        ConfigureObjects()
+
+            if not hookRegistered then
+                DebugLog("Registering hooks...")
+
+                local ok = pcall(function()
+                    RegisterHook("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C:InteractWith_A", HandleKeypadInteraction)
+                end)
+
+                if ok then
+                    DebugLog("Interaction hook registered successfully")
+                else
+                    DebugLog("ERROR: Failed to register interaction hook")
+                end
+
+                NotifyOnNewObject("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C", function(keypad)
+                    ExecuteWithDelay(750, function()
+                        ExecuteInGameThread(function()
+                            if keypad and keypad:IsValid() and keypad:GetFullName() == KEYPAD_FULL_NAME then
+                                DebugLog("Target keypad respawned, reconfiguring...")
+                                ConfigureObjects()
+                            end
+                        end)
                     end)
                 end)
+
+                hookRegistered = true
             end
+
+            -- Always configure objects when entering world
+            ConfigureObjects()
         end)
     end)
 end)
 
--- Register interaction hook (delayed to ensure Blueprint is fully loaded)
-ExecuteWithDelay(2500, function()
-    local ok, err = pcall(function()
-        RegisterHook("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C:InteractWith_A", HandleKeypadInteraction)
-    end)
-
-    if ok then
-        DebugLog("Interaction hook registered successfully")
-    else
-        DebugLog("ERROR: Failed to register hook: " .. tostring(err))
-    end
-end)
-
-DebugLog("Mod initialization started - hooks will be registered shortly")
+DebugLog("Mod finished loading")
