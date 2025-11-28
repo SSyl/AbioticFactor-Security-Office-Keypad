@@ -1,4 +1,4 @@
-print("=== [Security Office Keypad Enabler] MOD LOADED ===")
+print("=== [Security Office Keypad Enabler] MOD LOADED ===\n")
 
 local DEBUG = true
 local KEYPAD_PATH = "/Game/Maps/Facility_Office4.Facility_Office4:PersistentLevel.Button_Keypad_Tier1_C_0"
