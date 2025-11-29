@@ -16,7 +16,7 @@ end
 
 local function ConfigureObjects()
     DebugLog("Finding objects...")
-
+    
     targetKeypad = StaticFindObject(KEYPAD_PATH)
     if targetKeypad and targetKeypad:IsValid() then
         local ok, err = pcall(function()
@@ -50,14 +50,33 @@ local function HandleKeypadInteraction(Context)
     pcall(function() indoorButton:TriggerButtonWithoutUser() end)
 end
 
+local notifyRegistered = false
+
 NotifyOnNewObject("/Game/Blueprints/Meta/Abiotic_Survival_GameState.Abiotic_Survival_GameState_C", function()
     DebugLog("Game state detected")
+
+    if not notifyRegistered then
+        notifyRegistered = true
+        ExecuteWithDelay(5000, function()
+            RegisterHook("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C:InteractWith_A", HandleKeypadInteraction)
+            DebugLog("Hook registered")
+
+            NotifyOnNewObject("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C", function(keypad)
+                if keypad:GetFullName() == KEYPAD_FULL_NAME then
+                    DebugLog("Target keypad spawned")
+                    ExecuteWithDelay(1000, function()
+                        ExecuteInGameThread(function()
+                            ConfigureObjects()
+                        end)
+                    end)
+                end
+            end)
+        end)
+    end
 
     ExecuteWithDelay(5000, function()
         ExecuteInGameThread(function()
             ConfigureObjects()
-            RegisterHook("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C:InteractWith_A", HandleKeypadInteraction)
-            DebugLog("Hook registered")
         end)
     end)
 end)
