@@ -16,7 +16,7 @@ end
 
 local function ConfigureObjects()
     DebugLog("Finding objects...")
-    
+
     targetKeypad = StaticFindObject(KEYPAD_PATH)
     if targetKeypad and targetKeypad:IsValid() then
         local ok, err = pcall(function()
@@ -52,15 +52,20 @@ end
 
 local notifyRegistered = false
 
-NotifyOnNewObject("/Game/Blueprints/Meta/Abiotic_Survival_GameState.Abiotic_Survival_GameState_C", function()
-    DebugLog("Game state detected")
+RegisterBeginPlayPostHook(function(ActorParam)
+    local Actor = ActorParam:get()
+    if not Actor or not Actor:IsValid() then return end
+
+    local gameStateClass = Actor:GetClass():GetFName():ToString()
+    if gameStateClass ~= "Abiotic_Survival_GameState_C" then return end
+
+    DebugLog("Game state BeginPlay detected")
 
     if not notifyRegistered then
         notifyRegistered = true
         ExecuteWithDelay(5000, function()
             RegisterHook("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C:InteractWith_A", HandleKeypadInteraction)
             DebugLog("Hook registered")
-
             NotifyOnNewObject("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C", function(keypad)
                 if keypad:GetFullName() == KEYPAD_FULL_NAME then
                     DebugLog("Target keypad spawned")
