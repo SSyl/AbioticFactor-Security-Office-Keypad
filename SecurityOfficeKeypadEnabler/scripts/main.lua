@@ -8,14 +8,25 @@ local KEYPAD_FULL_NAME = "Button_Keypad_C " .. KEYPAD_PATH
 local targetKeypad = nil
 local indoorButton = nil
 
-local function DebugLog(message)
-    if DEBUG then
-        print("[Security Office Keypad Enabler] " .. tostring(message) .. "\n")
+local function Log(message, level)
+    level = level or "info"
+
+    if level == "debug" and not DEBUG then
+        return
     end
+
+    local prefix = ""
+    if level == "error" then
+        prefix = "ERROR: "
+    elseif level == "warning" then
+        prefix = "WARNING: "
+    end
+
+    print("[Security Office Keypad Enabler] " .. prefix .. tostring(message) .. "\n")
 end
 
 local function ConfigureObjects()
-    DebugLog("Finding objects...")
+    Log("Finding objects...", "debug")
 
     targetKeypad = StaticFindObject(KEYPAD_PATH)
     if targetKeypad and targetKeypad:IsValid() then
@@ -23,15 +34,15 @@ local function ConfigureObjects()
             targetKeypad.OneTimeUse = false
         end)
         if ok then
-            DebugLog("Keypad configured")
+            Log("Keypad configured", "debug")
         else
-            DebugLog("WARNING: " .. tostring(err))
+            Log(tostring(err), "warning")
         end
     end
 
     indoorButton = StaticFindObject(BUTTON_PATH)
     if indoorButton and indoorButton:IsValid() then
-        DebugLog("Indoor button found")
+        Log("Indoor button found", "debug")
     end
 end
 
@@ -46,7 +57,7 @@ local function HandleKeypadInteraction(Context)
     local ok, activated = pcall(function() return keypad.Activated end)
     if not ok or not activated then return end
 
-    DebugLog("Triggering shutters")
+    Log("Triggering shutters", "debug")
     pcall(function() indoorButton:TriggerButtonWithoutUser() end)
 end
 
@@ -59,16 +70,16 @@ RegisterBeginPlayPostHook(function(ActorParam)
     local gameStateClass = Actor:GetClass():GetFName():ToString()
     if gameStateClass ~= "Abiotic_Survival_GameState_C" then return end
 
-    DebugLog("Game state BeginPlay detected")
+    Log("Game state BeginPlay detected", "debug")
 
     if not notifyRegistered then
         notifyRegistered = true
         ExecuteWithDelay(5000, function()
             RegisterHook("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C:InteractWith_A", HandleKeypadInteraction)
-            DebugLog("Hook registered")
+            Log("Hook registered", "debug")
             NotifyOnNewObject("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C", function(keypad)
                 if keypad:GetFullName() == KEYPAD_FULL_NAME then
-                    DebugLog("Target keypad spawned")
+                    Log("Target keypad spawned", "debug")
                     ExecuteWithDelay(1000, function()
                         ExecuteInGameThread(function()
                             ConfigureObjects()
@@ -86,4 +97,4 @@ RegisterBeginPlayPostHook(function(ActorParam)
     end)
 end)
 
-DebugLog("Mod loaded")
+Log("Mod loaded", "debug")
