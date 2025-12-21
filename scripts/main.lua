@@ -29,7 +29,7 @@ local function ConfigureObjects()
     Log("Finding objects...", "debug")
 
     targetKeypad = StaticFindObject(KEYPAD_PATH)
-    if targetKeypad and targetKeypad:IsValid() then
+    if targetKeypad:IsValid() then
         local ok, err = pcall(function()
             targetKeypad.OneTimeUse = false
         end)
@@ -41,7 +41,7 @@ local function ConfigureObjects()
     end
 
     indoorButton = StaticFindObject(BUTTON_PATH)
-    if indoorButton and indoorButton:IsValid() then
+    if indoorButton:IsValid() then
         Log("Indoor button found", "debug")
     end
 end
