@@ -50,8 +50,8 @@ local function HandleKeypadInteraction(Context)
     if not Context then return end
 
     local keypad = Context:get()
-    if not keypad or not keypad:IsValid() then return end
-    if not indoorButton or not indoorButton:IsValid() then return end
+    if not keypad:IsValid() then return end
+    if not indoorButton or not indoorButton:IsValid() then return end  -- Keep nil check: cached variable
     if keypad:GetFullName() ~= KEYPAD_FULL_NAME then return end
 
     local ok, activated = pcall(function() return keypad.Activated end)
@@ -65,7 +65,7 @@ local notifyRegistered = false
 
 RegisterBeginPlayPostHook(function(ActorParam)
     local Actor = ActorParam:get()
-    if not Actor or not Actor:IsValid() then return end
+    if not Actor:IsValid() then return end
 
     local gameStateClass = Actor:GetClass():GetFName():ToString()
     if gameStateClass ~= "Abiotic_Survival_GameState_C" then return end
