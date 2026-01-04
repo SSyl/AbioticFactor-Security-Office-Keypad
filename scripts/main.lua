@@ -1,6 +1,5 @@
 print("=== [Security Office Keypad Enabler] MOD LOADING ===\n")
 
-local UEHelpers = require("UEHelpers")
 local LogUtil = require("LogUtil")
 local ConfigUtil = require("ConfigUtil")
 
@@ -27,7 +26,7 @@ local KEYPAD_FULL_NAME = "Button_Keypad_C " .. KEYPAD_PATH
 local targetKeypad = nil
 local indoorButton = nil
 local notifyRegistered = false
-local LoadMapPostHookFired = false
+local GameStateHookFired = false
 
 -- ============================================================
 -- FUNCTIONS
@@ -71,8 +70,8 @@ end
 -- INITIALIZATION
 -- ============================================================
 
-local function OnLoadMap(world)
-    LoadMapPostHookFired = true
+local function OnGameState(world)
+    GameStateHookFired = true
 
     if not world:IsValid() then return end
 
@@ -108,59 +107,64 @@ local function OnLoadMap(world)
         end
     end
 
-
-    local isGameplayMap = not mapName:match("MainMenu")
-    if isGameplayMap then
-        ExecuteWithDelay(2500, function()
-            ExecuteInGameThread(function()
-                ConfigureObjects()
-            end)
+    if mapName:match("MainMenu") then return end
+    ExecuteWithDelay(2500, function()
+        ExecuteInGameThread(function()
+            ConfigureObjects()
         end)
-    end
+    end)
 end
 
-RegisterLoadMapPostHook(function(Engine, World)
-    local world = World:get()
-    if world and world:IsValid() then
-        OnLoadMap(world)
+-- Hook Abiotic Factor's GameState ReceiveBeginPlay (fires once per map on both host and clients)
+RegisterHook("/Game/Blueprints/Meta/Abiotic_Survival_GameState.Abiotic_Survival_GameState_C:ReceiveBeginPlay",
+    function(Context)
+        Log.Debug("Abiotic_Survival_GameState:ReceiveBeginPlay fired")
+
+        local gameState = Context:get()
+        if not gameState:IsValid() then return end
+
+        local okWorld, world = pcall(function() return gameState:GetWorld() end)
+        if okWorld and world and world:IsValid() then
+            OnGameState(world)
+        end
     end
-end)
+)
 
 -- ============================================================
--- RACE CONDITION FALLBACK
+-- FALLBACK: POLL FOR MISSED HOOK
 -- ============================================================
--- UE4SS can initialize late, missing lifecycle hooks.
--- This polls until world is loaded, then invokes OnLoadMap manually.
+-- UE4SS can initialize after GameState:ReceiveBeginPlay has already fired.
+-- This polls until GameState exists, then manually invokes the handler.
 
-local function PollForMissedHooks(attempts)
+local function PollForMissedHook(attempts)
     attempts = attempts or 0
 
-    if LoadMapPostHookFired then return end
+    if GameStateHookFired then return end
 
     ExecuteInGameThread(function()
-        local existingActor = FindFirstOf("Actor")
-        if not existingActor:IsValid() then
+        local gameState = FindFirstOf("Abiotic_Survival_GameState_C")
+        if not gameState:IsValid() then
             if attempts < 100 then
                 ExecuteWithDelay(100, function()
-                    PollForMissedHooks(attempts + 1)
+                    PollForMissedHook(attempts + 1)
                 end)
             end
             return
         end
 
-        -- World loaded but hook missed - invoke manually
-        if not LoadMapPostHookFired then
-            local world = UEHelpers.GetWorld()
-            if world:IsValid() then
-                Log.Debug("Fallback: LoadMapPostHook missed, invoking OnLoadMap manually")
-                OnLoadMap(world)
+        -- GameState exists but hook missed - invoke manually
+        if not GameStateHookFired then
+            local okWorld, world = pcall(function() return gameState:GetWorld() end)
+            if okWorld and world and world:IsValid() then
+                Log.Debug("Fallback: GameState hook missed, invoking OnGameState manually")
+                OnGameState(world)
             end
         end
 
-        if not LoadMapPostHookFired then
+        if not GameStateHookFired then
             if attempts < 100 then
                 ExecuteWithDelay(100, function()
-                    PollForMissedHooks(attempts + 1)
+                    PollForMissedHook(attempts + 1)
                 end)
             else
                 Log.Error("Fallback polling gave up after %d attempts", attempts + 1)
@@ -171,6 +175,6 @@ local function PollForMissedHooks(attempts)
     end)
 end
 
-PollForMissedHooks()
+PollForMissedHook()
 
 Log.Debug("Mod loaded")
