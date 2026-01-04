@@ -115,26 +115,26 @@ local function OnGameState(world)
     end)
 end
 
--- Hook Abiotic Factor's GameState ReceiveBeginPlay (fires once per map on both host and clients)
-RegisterHook("/Game/Blueprints/Meta/Abiotic_Survival_GameState.Abiotic_Survival_GameState_C:ReceiveBeginPlay",
-    function(Context)
-        Log.Debug("Abiotic_Survival_GameState:ReceiveBeginPlay fired")
+-- Hook callback for GameState:ReceiveBeginPlay
+local function OnGameStateHook(Context)
+    Log.Debug("Abiotic_Survival_GameState:ReceiveBeginPlay fired")
 
-        local gameState = Context:get()
-        if not gameState:IsValid() then return end
+    local gameState = Context:get()
+    if not gameState:IsValid() then return end
 
-        local okWorld, world = pcall(function() return gameState:GetWorld() end)
-        if okWorld and world and world:IsValid() then
-            OnGameState(world)
-        end
+    local okWorld, world = pcall(function() return gameState:GetWorld() end)
+    if okWorld and world and world:IsValid() then
+        OnGameState(world)
     end
-)
+end
 
 -- ============================================================
--- FALLBACK: POLL FOR MISSED HOOK
+-- GAMESTATE HOOK REGISTRATION VIA POLLING
 -- ============================================================
--- UE4SS can initialize after GameState:ReceiveBeginPlay has already fired.
--- This polls until GameState exists, then manually invokes the handler.
+-- Blueprint may not be loaded at mod init.
+-- Poll until GameState exists, then register hook + handle current map.
+
+local hookRegistered = false
 
 local function PollForMissedHook(attempts)
     attempts = attempts or 0
@@ -154,9 +154,21 @@ local function PollForMissedHook(attempts)
 
         -- GameState exists but hook missed - invoke manually
         if not GameStateHookFired then
+            -- Blueprint is loaded now - retry hook registration for future map loads
+            if not hookRegistered then
+                local retryOk = pcall(RegisterHook,
+                    "/Game/Blueprints/Meta/Abiotic_Survival_GameState.Abiotic_Survival_GameState_C:ReceiveBeginPlay",
+                    OnGameStateHook
+                )
+                if retryOk then
+                    hookRegistered = true
+                    Log.Debug("Fallback: Hook registered successfully")
+                end
+            end
+
             local okWorld, world = pcall(function() return gameState:GetWorld() end)
             if okWorld and world and world:IsValid() then
-                Log.Debug("Fallback: GameState hook missed, invoking OnGameState manually")
+                Log.Debug("Fallback: Invoking OnGameState manually")
                 OnGameState(world)
             end
         end
