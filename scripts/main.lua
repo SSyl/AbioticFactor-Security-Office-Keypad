@@ -142,47 +142,38 @@ local function PollForMissedHook(attempts)
     if GameStateHookFired then return end
 
     ExecuteInGameThread(function()
-        local gameState = FindFirstOf("Abiotic_Survival_GameState_C")
-        if not gameState:IsValid() then
-            if attempts < 100 then
-                ExecuteWithDelay(100, function()
-                    PollForMissedHook(attempts + 1)
-                end)
-            end
-            return
-        end
-
-        -- GameState exists but hook missed - invoke manually
-        if not GameStateHookFired then
-            -- Blueprint is loaded now - retry hook registration for future map loads
-            if not hookRegistered then
-                local retryOk = pcall(RegisterHook,
-                    "/Game/Blueprints/Meta/Abiotic_Survival_GameState.Abiotic_Survival_GameState_C:ReceiveBeginPlay",
-                    OnGameStateHook
-                )
-                if retryOk then
-                    hookRegistered = true
-                    Log.Debug("Fallback: Hook registered successfully")
-                end
-            end
-
-            local okWorld, world = pcall(function() return gameState:GetWorld() end)
-            if okWorld and world and world:IsValid() then
-                Log.Debug("Fallback: Invoking OnGameState manually")
-                OnGameState(world)
-            end
-        end
-
-        if not GameStateHookFired then
+        local base = FindFirstOf("GameStateBase")
+        if not base:IsValid() then
             if attempts < 100 then
                 ExecuteWithDelay(100, function()
                     PollForMissedHook(attempts + 1)
                 end)
             else
-                Log.Error("Fallback polling gave up after %d attempts", attempts + 1)
+                Log.Error("GameStateBase never found after %d attempts", attempts + 1)
             end
-        else
-            Log.Debug("Fallback succeeded on attempt %d", attempts + 1)
+            return
+        end
+
+        -- Register hook once any GameState exists (even main menu)
+        if not hookRegistered then
+            local ok = pcall(RegisterHook,
+                "/Game/Blueprints/Meta/Abiotic_Survival_GameState.Abiotic_Survival_GameState_C:ReceiveBeginPlay",
+                OnGameStateHook
+            )
+            if ok then
+                hookRegistered = true
+                Log.Debug("Hook registered")
+            end
+        end
+
+        -- If already in gameplay map, handle current map manually
+        local gameState = FindFirstOf("Abiotic_Survival_GameState_C")
+        if gameState:IsValid() then
+            Log.Debug("Gameplay GameState found, invoking OnGameState")
+            local okWorld, world = pcall(function() return gameState:GetWorld() end)
+            if okWorld and world and world:IsValid() then
+                OnGameState(world)
+            end
         end
     end)
 end
