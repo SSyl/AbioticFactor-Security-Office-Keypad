@@ -56,7 +56,7 @@ local function HandleKeypadInteraction(Context)
 
     local keypad = Context:get()
     if not keypad:IsValid() then return end
-    if not indoorButton or not indoorButton:IsValid() then return end  -- Keep nil check: cached variable
+    if not indoorButton or not indoorButton:IsValid() then return end -- Keep nil check: cached variable
     if keypad:GetFullName() ~= KEYPAD_FULL_NAME then return end
 
     local ok, activated = pcall(function() return keypad.Activated end)
@@ -82,29 +82,26 @@ local function OnGameState(world)
     end
 
     if not notifyRegistered then
-        local asset, wasFound, wasLoaded = LoadAsset("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C")
-        if wasFound and wasLoaded and asset:IsValid() then
-            notifyRegistered = true
-            ExecuteWithDelay(2500, function()
-                local okHook, errHook = pcall(RegisterHook,
-                    "/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C:InteractWith_A",
-                    HandleKeypadInteraction
-                )
-                if not okHook then
-                    Log.Error("Hook registration failed: %s", tostring(errHook))
-                end
-            end)
+        notifyRegistered = true
+        ExecuteWithDelay(2500, function()
+            local okHook, errHook = pcall(RegisterHook,
+                "/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C:InteractWith_A",
+                HandleKeypadInteraction
+            )
+            if not okHook then
+                Log.Error("Hook registration failed: %s", tostring(errHook))
+            end
+        end)
 
-            NotifyOnNewObject("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C", function(keypad)
-                if keypad:GetFullName() == KEYPAD_FULL_NAME then
-                    ExecuteWithDelay(2500, function()
-                        ExecuteInGameThread(function()
-                            ConfigureObjects()
-                        end)
+        NotifyOnNewObject("/Game/Blueprints/Environment/Switches/Button_Keypad.Button_Keypad_C", function(keypad)
+            if keypad:GetFullName() == KEYPAD_FULL_NAME then
+                ExecuteWithDelay(2500, function()
+                    ExecuteInGameThread(function()
+                        ConfigureObjects()
                     end)
-                end
-            end)
-        end
+                end)
+            end
+        end)
     end
 
     if mapName:match("MainMenu") then return end
