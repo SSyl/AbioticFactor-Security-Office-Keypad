@@ -35,12 +35,7 @@ local GameStateHookFired = false
 local function ConfigureObjects()
     targetKeypad = StaticFindObject(KEYPAD_PATH)
     if targetKeypad:IsValid() then
-        local ok, err = pcall(function()
-            targetKeypad.OneTimeUse = false
-        end)
-        if not ok then
-            Log.Warning("Failed to configure keypad: %s", tostring(err))
-        end
+        targetKeypad.OneTimeUse = false
     else
         Log.Debug("Keypad not found - wrong map?")
     end
@@ -59,11 +54,11 @@ local function HandleKeypadInteraction(Context)
     if not indoorButton or not indoorButton:IsValid() then return end -- Keep nil check: cached variable
     if keypad:GetFullName() ~= KEYPAD_FULL_NAME then return end
 
-    local ok, activated = pcall(function() return keypad.Activated end)
-    if not ok or not activated then return end
+    local activated = keypad.Activated
+    if not activated then return end
 
     Log.Debug("Triggering shutters")
-    pcall(function() indoorButton:TriggerButtonWithoutUser() end)
+    indoorButton:TriggerButtonWithoutUser()
 end
 
 -- ============================================================
@@ -75,8 +70,8 @@ local function OnGameState(world)
 
     if not world:IsValid() then return end
 
-    local okFullName, fullName = pcall(function() return world:GetFullName() end)
-    local mapName = okFullName and fullName and fullName:match("/Game/Maps/([^%.]+)")
+    local fullName = world:GetFullName()
+    local mapName = fullName and fullName:match("/Game/Maps/([^%.]+)")
     if not mapName then
         return
     end
@@ -119,8 +114,8 @@ local function OnGameStateHook(Context)
     local gameState = Context:get()
     if not gameState:IsValid() then return end
 
-    local okWorld, world = pcall(function() return gameState:GetWorld() end)
-    if okWorld and world and world:IsValid() then
+    local world = gameState:GetWorld()
+    if world and world:IsValid() then
         OnGameState(world)
     end
 end
@@ -167,8 +162,8 @@ local function PollForMissedHook(attempts)
         local gameState = FindFirstOf("Abiotic_Survival_GameState_C")
         if gameState:IsValid() then
             Log.Debug("Gameplay GameState found, invoking OnGameState")
-            local okWorld, world = pcall(function() return gameState:GetWorld() end)
-            if okWorld and world and world:IsValid() then
+            local world = gameState:GetWorld()
+            if world and world:IsValid() then
                 OnGameState(world)
             end
         end
