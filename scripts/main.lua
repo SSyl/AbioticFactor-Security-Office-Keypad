@@ -50,7 +50,7 @@ local function HandleKeypadInteraction(Context)
     if not Context then return end
 
     local keypad = Context:get()
-    if not keypad:IsValid() then return end
+    if not keypad or not keypad:IsValid() then return end
     if not indoorButton or not indoorButton:IsValid() then return end -- Keep nil check: cached variable
     if keypad:GetFullName() ~= KEYPAD_FULL_NAME then return end
 
@@ -112,7 +112,7 @@ local function OnGameStateHook(Context)
     Log.Debug("Abiotic_Survival_GameState:ReceiveBeginPlay fired")
 
     local gameState = Context:get()
-    if not gameState:IsValid() then return end
+    if not gameState or not gameState:IsValid() then return end
 
     local world = gameState:GetWorld()
     if world and world:IsValid() then
